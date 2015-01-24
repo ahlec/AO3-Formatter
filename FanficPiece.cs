@@ -85,6 +85,39 @@ namespace AO3_Formatter
             _lines.Add(FinishLine(lineElement));
         }
 
+        public static IEnumerable<FormattingRule> GetFormattingRules()
+        {
+            yield return new FormattingRule()
+            {
+                Input = "*{0}*",
+                Output = "<em>{0}</em>"
+            };
+            yield return new FormattingRule()
+            {
+                Input = "**{0}**",
+                Output = "<strong>{0}</strong>"
+            };
+            yield return new FormattingRule()
+            {
+                Input = "[tab character]{0}",
+                Output = "<p class=\"indent\">{0}</p>"
+            };
+            yield return new FormattingRule()
+            {
+                Input = "_{0}_",
+                Output = "<u>{0}</u>"
+            };
+            yield return new FormattingRule()
+            {
+                Input = "--",
+                Output = "—"
+            };
+            foreach (FormattingRule projectRule in GetProjectFormattingRules())
+            {
+                yield return projectRule;
+            }
+        }
+
         // **********
         // Utility functions
         //
@@ -189,5 +222,20 @@ namespace AO3_Formatter
 
         }
 
+        private static IEnumerable<FormattingRule> GetProjectFormattingRules()
+        {
+            /* =============================================
+             * Insert custom project logic here; for every project-specific rule, a rule should be provided
+             * so that even if the formatter hasn't been used in months, there is still non-code based documentation
+             * of what transformations are supported.
+             * 
+             * Please be aware that both FormattingRule::Input and FormattingRule::Output are going to be
+             * subjected to string.Format(...). These two properties should wrap around a `{0}` which will be
+             * replaced with stock text demonstrating the transformation.
+             * ==============================================
+             **/
+
+            yield break;
+        }
     }
 }

@@ -27,7 +27,7 @@ namespace AO3_Formatter
 
         private void onDisplayRules(object sender, EventArgs e)
         {
-
+            new RulesDisplay().ShowDialog(this);
         }
 
         private void onSave(object sender, EventArgs e)
@@ -83,6 +83,12 @@ namespace AO3_Formatter
         private void OnTextAreaClick(object sender, EventArgs e)
         {
             txtOutput.SelectAll();
+        }
+
+        private void OnAboutClicked(object sender, EventArgs e)
+        {
+            MessageBox.Show(string.Concat("Core version: ", VERSIONING.CORE_VERSION),
+                "AO3 Formatter", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
         }
     }
 }
