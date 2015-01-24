@@ -26,6 +26,9 @@ namespace AO3_Formatter
         private static Regex s_bold = new Regex(@"(?<!\*)\*{2}([^\*]+?)(\*{2}|$)(?!\*)"); // Just a quick manip of italics
         private static Regex s_underline = new Regex(@"_+([^\*]+?)_+");
 
+        private static Regex s_imessage = new Regex(@"^\[(-|=){1,}\]$");
+        private static Regex s_textMessage = new Regex(@"^\[(.*?)(<|>)(.*?)\]");
+
         private List<string> _lines = new List<string>();
 
         private FanficPiece(string filePath)
@@ -196,12 +199,45 @@ namespace AO3_Formatter
              * ==============================================
              **/
 
+            string unindentedLine = GetLineWithoutIndent(line);
+
+            TextMessage textMessage = ParseTextMessage(unindentedLine);
+            if (textMessage != null)
+            {
+                yield return "textBubble";
+                yield return textMessage.Recipient.PhoneType.ToString().ToLower();
+                yield return (textMessage.Direction == TextMessageDirection.Outgoing ? "right" : "left");
+            }
+
+            if (s_imessage.IsMatch(unindentedLine))
+            {
+                yield return "iMessage";
+            }
 
             // ------------------ Default logic ------------------------- //
-            if (IsLineIndented(line))
+            if (textMessage != null && IsLineIndented(line))
             {
                 yield return "indent";
             }
+        }
+
+        private TextMessage ParseTextMessage(string line)
+        {
+            line = line.Replace("&lt;", "<");
+            line = line.Replace("&gt;", ">");
+            Match regexMatch = s_textMessage.Match(line);
+            if (regexMatch == null || string.IsNullOrWhiteSpace(regexMatch.Value))
+            {
+                return null;
+            }
+
+            return new TextMessage()
+            {
+                Recipient = CellPhones.Retrieve(regexMatch.Groups[1].Value),
+                Direction = (regexMatch.Groups[2].Value == ">" ? TextMessageDirection.Incoming : TextMessageDirection.Outgoing),
+                Sender = CellPhones.Retrieve(regexMatch.Groups[3].Value),
+                IndicatorLength = regexMatch.Value.Length + 3
+            };
         }
 
         private void ManipulateLine(ref StringBuilder lineBuilder)
@@ -218,8 +254,25 @@ namespace AO3_Formatter
              * ==============================================
              **/
 
+            if (s_imessage.IsMatch(lineBuilder.ToString()))
+            {
+                lineBuilder = new StringBuilder("[-------------]");
+                return;
+            }
 
-
+            TextMessage textMessage = ParseTextMessage(lineBuilder.ToString());
+            if (textMessage != null)
+            {
+                // because "<" is actually "&lt;"
+                lineBuilder.Remove(0, textMessage.IndicatorLength);
+                while (Char.IsWhiteSpace(lineBuilder[0]))
+                {
+                    lineBuilder.Remove(0, 1);
+                }
+                lineBuilder.Insert(0, string.Concat("<span class=\"name\">(",
+                    (textMessage.Direction == TextMessageDirection.Incoming ?
+                    textMessage.Recipient : textMessage.Sender).Name, ") </span>"));
+            }
         }
 
         private static IEnumerable<FormattingRule> GetProjectFormattingRules()
@@ -234,6 +287,12 @@ namespace AO3_Formatter
              * replaced with stock text demonstrating the transformation.
              * ==============================================
              **/
+
+            yield return new FormattingRule()
+            {
+                Input = "[-------------]",
+                Output = "<p class=\"iMessage\">[-------------]</p>"
+            };
 
             yield break;
         }

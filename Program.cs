@@ -45,11 +45,11 @@ namespace AO3_Formatter
             }
 
             FanficPiece piece;
-            try
+            //try
             {
                 piece = FanficPiece.Parse(sourceFilename);
             }
-            catch (Exception ex)
+            /*catch (Exception ex)
             {
                 string errorMessage = "Completely unknown error!";
                 if (ex != null)
@@ -60,7 +60,7 @@ namespace AO3_Formatter
 
                 MessageBox.Show(errorMessage, "AO3 Formatter", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
-            }
+            }*/
 
             DisplayForm form = new DisplayForm(piece);
             form.Activate();
