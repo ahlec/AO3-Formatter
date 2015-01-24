@@ -95,6 +95,14 @@ namespace AO3_Formatter
             return s_indentation.IsMatch(line);
         }
 
+        /// <summary>
+        /// Returns the line without any indentation, if there is any.
+        /// </summary>
+        private string GetLineWithoutIndent(string line)
+        {
+            return s_indentation.Replace(line, "");
+        }
+
         private void ApplyRegexToStringBuilder(ref StringBuilder lineBuilder, Regex regex,
             string replacement)
         {
@@ -154,7 +162,6 @@ namespace AO3_Formatter
              * Don't forget -- to end early, use `yield break;`!
              * ==============================================
              **/
-
 
 
             // ------------------ Default logic ------------------------- //
