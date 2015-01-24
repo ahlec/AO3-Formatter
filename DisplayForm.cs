@@ -50,9 +50,17 @@ namespace AO3_Formatter
                 if (fileStream != null)
                 {
                     StreamWriter writer = new StreamWriter(fileStream);
-                    foreach (string line in _piece.Lines)
+                    string[] lines = _piece.Lines;
+                    for (int index = 0; index < lines.Length; ++index)
                     {
-                        writer.WriteLine(line);
+                        if (index < lines.Length - 1)
+                        {
+                            writer.WriteLine(lines[index]);
+                        }
+                        else
+                        {
+                            writer.Write(lines[index]);
+                        }
                     }
                     writer.Close();
                     MessageBox.Show("File successfully saved!", "AO3 Formatter", MessageBoxButtons.OK,

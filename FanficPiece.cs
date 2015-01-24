@@ -71,7 +71,7 @@ namespace AO3_Formatter
             {
                 if (_lines.Count > 0 && !string.IsNullOrWhiteSpace(_lines[_lines.Count - 1]))
                 {
-                    _lines.Add("\n");
+                    _lines.Add(string.Empty);
                 }
                 return;
             }
@@ -99,10 +99,7 @@ namespace AO3_Formatter
             string replacement)
         {
             // This is janky as shit but there wasn't a more elegant solution on Stack Overflow
-            // and this works the purpose
-
-            string input = lineBuilder.ToString();
-            string result = regex.Replace(input, replacement);
+            // and this works the purpose.
             lineBuilder = new StringBuilder(regex.Replace(lineBuilder.ToString(), replacement));
         }
 
