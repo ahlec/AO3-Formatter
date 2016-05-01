@@ -13,6 +13,8 @@ namespace AO3_Formatter
         private static Regex s_indentation = new Regex(@"^(\t+\s*|\s{3,})");
         private static Regex s_multipleConsecutiveWhitespaceCharacters = new Regex(@"( ){2,}");
         private static Regex s_reduceHtmlWhitespace = new Regex(@"(^|>)\s*(<|$)");
+        private static Regex s_openingCurlyQuotes = new Regex("(^|\\s+)\""); // start of a new line or space before it.
+        private static Regex s_closingCurlySingleQuote = new Regex( "(\\w|\\*|\\.|\\?|!)'(\\w|\\s+|\\*|\\.|\\?|!|\"|$)" ); // single quote at end of line, sandwiched between letters/formatting, 
 
         /// <summary>
         /// This uses a lookbehind (`(?<!\*)`) to make sure there is no previous asterisk
@@ -25,9 +27,6 @@ namespace AO3_Formatter
         private static Regex s_italics = new Regex(@"(?<!\*)\*{1}([^\*]+?)(\*{1}|$)(?!\*)");
         private static Regex s_bold = new Regex(@"(?<!\*)\*{2}([^\*]+?)(\*{2}|$)(?!\*)"); // Just a quick manip of italics
         private static Regex s_underline = new Regex(@"_+([^\*]+?)_+");
-
-        private static Regex s_imessage = new Regex(@"^\[(-|=){1,}\]$");
-        private static Regex s_textMessage = new Regex(@"^\[(.*?)(<|>)(.*?)\]");
 
         private List<string> _lines = new List<string>();
 
@@ -107,6 +106,11 @@ namespace AO3_Formatter
             };
             yield return new FormattingRule()
             {
+                Input = "\t{0}",
+                Output = "    {0}"
+            };
+            yield return new FormattingRule()
+            {
                 Input = "_{0}_",
                 Output = "<u>{0}</u>"
             };
@@ -142,9 +146,12 @@ namespace AO3_Formatter
         private void ApplyRegexToStringBuilder(ref StringBuilder lineBuilder, Regex regex,
             string replacement)
         {
-            // This is janky as shit but there wasn't a more elegant solution on Stack Overflow
-            // and this works the purpose.
-            lineBuilder = new StringBuilder(regex.Replace(lineBuilder.ToString(), replacement));
+            MatchCollection matches = regex.Matches(lineBuilder.ToString());
+            for (int index = matches.Count - 1; index >= 0; --index)
+            {
+                string replacementResult = matches[index].Result(replacement);
+                lineBuilder.Splice(replacementResult, matches[index].Index, matches[index].Value.Length);
+            }
         }
 
         private void PrepRawString(ref StringBuilder lineBuilder)
@@ -165,6 +172,34 @@ namespace AO3_Formatter
             lineBuilder.Replace("<", "&lt;");
             lineBuilder.Replace(">", "&gt;");
             lineBuilder.Replace("--", "&#8212;");
+            lineBuilder.Replace("\t", "    ");
+
+            // -------------- Begin curlies
+            MatchCollection openings = s_openingCurlyQuotes.Matches(lineBuilder.ToString());
+            for (int index = openings.Count - 1; index >= 0; --index)
+            {
+                int indexOfQuote = openings[index].Value.IndexOf("\"");
+                lineBuilder[openings[index].Index + indexOfQuote] = '“';
+            }
+            lineBuilder.Replace('\"', '”');
+
+            MatchCollection closings = s_closingCurlySingleQuote.Matches(lineBuilder.ToString());
+            for (int index = closings.Count - 1; index >= 0; --index)
+            {
+                int indexOfQuote = closings[index].Value.IndexOf("\'");
+                lineBuilder[closings[index].Index + indexOfQuote] = '’';
+            }
+            lineBuilder.Replace('\'', '‘');
+
+            string currentString = lineBuilder.ToString();
+            if (currentString.IndexOfAny(new[] { '\'', '"' }) >= 0)
+            {
+                System.Windows.Forms.MessageBox.Show("There was a problem with the detection and conversion of curly quotes or apostrophes. Please pay close attention when formatting and fix the detection regex as well.",
+                    "AO3 Formatter", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+            }
+            
+            // -------------- End curlies
+
             ApplyRegexToStringBuilder(ref lineBuilder, s_multipleConsecutiveWhitespaceCharacters, " ");
             ApplyRegexToStringBuilder(ref lineBuilder, s_bold, "<strong>$1</strong>");
             ApplyRegexToStringBuilder(ref lineBuilder, s_italics, "<em>$1</em>");
@@ -201,43 +236,11 @@ namespace AO3_Formatter
 
             string unindentedLine = GetLineWithoutIndent(line);
 
-            TextMessage textMessage = ParseTextMessage(unindentedLine);
-            if (textMessage != null)
-            {
-                yield return "textBubble";
-                yield return textMessage.Recipient.PhoneType.ToString().ToLower();
-                yield return (textMessage.Direction == TextMessageDirection.Outgoing ? "right" : "left");
-            }
-
-            if (s_imessage.IsMatch(unindentedLine))
-            {
-                yield return "iMessage";
-            }
-
             // ------------------ Default logic ------------------------- //
-            if (textMessage != null && IsLineIndented(line))
+            if (IsLineIndented(line))
             {
                 yield return "indent";
             }
-        }
-
-        private TextMessage ParseTextMessage(string line)
-        {
-            line = line.Replace("&lt;", "<");
-            line = line.Replace("&gt;", ">");
-            Match regexMatch = s_textMessage.Match(line);
-            if (regexMatch == null || string.IsNullOrWhiteSpace(regexMatch.Value))
-            {
-                return null;
-            }
-
-            return new TextMessage()
-            {
-                Recipient = CellPhones.Retrieve(regexMatch.Groups[1].Value),
-                Direction = (regexMatch.Groups[2].Value == ">" ? TextMessageDirection.Incoming : TextMessageDirection.Outgoing),
-                Sender = CellPhones.Retrieve(regexMatch.Groups[3].Value),
-                IndicatorLength = regexMatch.Value.Length + 3
-            };
         }
 
         private void ManipulateLine(ref StringBuilder lineBuilder)
@@ -253,26 +256,6 @@ namespace AO3_Formatter
              * because this is going to become well-formatted XML!!
              * ==============================================
              **/
-
-            if (s_imessage.IsMatch(lineBuilder.ToString()))
-            {
-                lineBuilder = new StringBuilder("[-------------]");
-                return;
-            }
-
-            TextMessage textMessage = ParseTextMessage(lineBuilder.ToString());
-            if (textMessage != null)
-            {
-                // because "<" is actually "&lt;"
-                lineBuilder.Remove(0, textMessage.IndicatorLength);
-                while (Char.IsWhiteSpace(lineBuilder[0]))
-                {
-                    lineBuilder.Remove(0, 1);
-                }
-                lineBuilder.Insert(0, string.Concat("<span class=\"name\">(",
-                    (textMessage.Direction == TextMessageDirection.Incoming ?
-                    textMessage.Recipient : textMessage.Sender).Name, ") </span>"));
-            }
         }
 
         private static IEnumerable<FormattingRule> GetProjectFormattingRules()
@@ -287,12 +270,6 @@ namespace AO3_Formatter
              * replaced with stock text demonstrating the transformation.
              * ==============================================
              **/
-
-            yield return new FormattingRule()
-            {
-                Input = "[-------------]",
-                Output = "<p class=\"iMessage\">[-------------]</p>"
-            };
 
             yield break;
         }

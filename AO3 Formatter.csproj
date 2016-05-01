@@ -47,8 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CellPhone.cs" />
-    <Compile Include="CellPhones.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="FanficPiece.cs" />
     <Compile Include="DisplayForm.cs">
       <SubType>Form</SubType>
@@ -57,7 +56,6 @@
       <DependentUpon>DisplayForm.cs</DependentUpon>
     </Compile>
     <Compile Include="FormattingRule.cs" />
-    <Compile Include="PhoneType.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RulesDisplay.cs">
@@ -66,8 +64,6 @@
     <Compile Include="RulesDisplay.Designer.cs">
       <DependentUpon>RulesDisplay.cs</DependentUpon>
     </Compile>
-    <Compile Include="TextMessage.cs" />
-    <Compile Include="TextMessageDirection.cs" />
     <Compile Include="VERSIONING.cs" />
     <EmbeddedResource Include="DisplayForm.resx">
       <DependentUpon>DisplayForm.cs</DependentUpon>
